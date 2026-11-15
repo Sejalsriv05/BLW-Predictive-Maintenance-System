@@ -21,7 +21,6 @@ with st.sidebar:
 
 st.markdown("""
 <style>
-/* Force Main App and Sidebar to Dark Theme */
 .stApp, [data-testid="stAppViewContainer"] {
     background-color: #0F172A !important;
 }
@@ -29,21 +28,23 @@ st.markdown("""
     background-color: #1E293B !important;
 }
 
-/* Fix for both the >> expand button and the << collapse button */
-[data-testid="collapsedControl"], 
-[data-testid="stSidebarCollapseButton"] {
-    color: #000000 !important;
+/* Aggressive targeting for the << collapse button in newer Streamlit versions */
+[data-testid="stSidebarCollapseButton"], 
+[data-testid="collapsedControl"],
+button[kind="headerNoPadding"],
+button[kind="header"] {
     background-color: #FFFFFF !important;
     border-radius: 5px !important;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
 }
-[data-testid="collapsedControl"] svg, 
-[data-testid="stSidebarCollapseButton"] svg {
+[data-testid="stSidebarCollapseButton"] svg, 
+[data-testid="collapsedControl"] svg,
+button[kind="headerNoPadding"] svg,
+button[kind="header"] svg {
     fill: #000000 !important;
     color: #000000 !important;
+    stroke: #000000 !important;
 }
 
-/* Force all labels and standard text to be white */
 label, label p, p, span {
     color: #F8FAFC !important;
 }
@@ -305,7 +306,6 @@ def dashboard_page():
     st.subheader("3. Tool Wear vs. Machine Failure Distribution")
     st.info("💡 **How to read this chart:** This is a **Distribution Histogram**. It shows how the amount of **Tool Wear (in minutes)** impacts whether a machine fails or remains healthy. The red bars highlight the 'danger zone' where tool wear gets too high and causes system failures.")
     
-    # Map 0 and 1 to readable strings so the legend looks professional
     df["Status"] = df["Machine failure"].map({0: "Healthy", 1: "Failed"})
     
     fig_hist = px.histogram(
@@ -326,18 +326,23 @@ def machine_analysis_page():
 
     try:
         raw_data = pd.read_csv("output/maintenance_results.csv")
-        if raw_data.empty or "Machine" not in raw_data.columns:
-            st.warning("No predictions available yet. Please use the Predictor tab first.")
+        # Clean out empty rows or corrupted string data from previous broken runs
+        raw_data = raw_data.dropna(subset=["Machine"])
+        raw_data = raw_data[raw_data["Machine"].astype(str).str.lower() != 'nan']
+
+        if raw_data.empty:
+            st.warning("No valid predictions available yet. Please use the Predictor tab first.")
             return
             
         raw_data["Health Score"] = pd.to_numeric(raw_data["Health Score"], errors="coerce")
         raw_data["Failure Probability"] = pd.to_numeric(raw_data["Failure Probability"], errors="coerce")
-        raw_data["Prediction ID"] = raw_data.index + 1
+        raw_data["Prediction ID"] = range(1, len(raw_data) + 1)
         
     except Exception as e:
         st.warning("No predictions available yet. Please use the Predictor tab first.")
         return
 
+    # Create cleaned list for dropdown
     machine_list = raw_data["Machine"].unique()
     selected_machine = st.selectbox("🏭 Select Machine to Analyze:", machine_list)
 
@@ -345,12 +350,13 @@ def machine_analysis_page():
 
     st.markdown("---")
     
+    # This generates a Line Chart
     fig_line = px.line(
         machine_data, 
         x="Prediction ID", 
         y="Health Score", 
         markers=True, 
-        title=f"Health Degradation Trend: {selected_machine}"
+        title=f"Line Chart: Health Degradation Trend for {selected_machine}"
     )
     fig_line.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
     st.plotly_chart(fig_line, use_container_width=True, theme=None)
