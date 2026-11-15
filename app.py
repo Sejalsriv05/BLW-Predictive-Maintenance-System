@@ -21,15 +21,12 @@ with st.sidebar:
 
 st.markdown("""
 <style>
-/* Force Main App and Sidebar to Dark Theme */
 .stApp, [data-testid="stAppViewContainer"] {
     background-color: #0F172A !important;
 }
 [data-testid="stSidebar"] {
     background-color: #1E293B !important;
 }
-
-/* Fix for the top-left sidebar navigation expand/collapse button */
 [data-testid="collapsedControl"] {
     color: #000000 !important;
     background-color: #FFFFFF !important;
@@ -40,8 +37,6 @@ st.markdown("""
     fill: #000000 !important;
     color: #000000 !important;
 }
-
-/* Force all labels and standard text to be white */
 label, label p, p, span {
     color: #F8FAFC !important;
 }
@@ -136,10 +131,7 @@ def predictor_page():
     )
     st.subheader("Enter Machine Details")
 
-    machine_category = st.selectbox(
-        "Machine Category",
-        ["Low (L)", "Medium (M)", "High (H)"]
-    )
+    machine_category = st.selectbox("Machine Category", ["Low (L)", "Medium (M)", "High (H)"])
 
     if machine_category == "Low (L)":
         machine_name = st.selectbox("Machine", ["Cooling Fan", "Air Compressor", "Small Pump", "Conveyor Motor"])
@@ -241,95 +233,96 @@ def predictor_page():
 
 
 def dashboard_page():
-    st.header("📊 Factory Overview Dashboard (All Data)")
-    st.write("This dashboard displays the macro-level health of all machines monitored across the factory.")
+    st.header("📊 Global Dataset Overview (UCI AI4I 2020)")
+    st.write("This macro dashboard analyzes the original historical dataset used to train the Predictive Maintenance model.")
 
     try:
-        raw_data = pd.read_csv("output/maintenance_results.csv")
-        if raw_data.empty or "Machine" not in raw_data.columns:
-            st.warning("No maintenance records available yet. Please run a prediction first.")
+        # Load the UCI dataset from the repository
+        if os.path.exists("data/ai4i2020.csv"):
+            df = pd.read_csv("data/ai4i2020.csv")
+        elif os.path.exists("ai4i2020.csv"):
+            df = pd.read_csv("ai4i2020.csv")
+        elif os.path.exists("predictive_maintenance.csv"):
+            df = pd.read_csv("predictive_maintenance.csv")
+        else:
+            st.error("⚠️ Dataset not found. Please ensure your UCI dataset is uploaded to GitHub and named 'ai4i2020.csv'.")
             return
             
-        raw_data["Health Score"] = pd.to_numeric(raw_data["Health Score"], errors="coerce")
-        raw_data["Prediction ID"] = raw_data.index + 1
-        
-        # Deduplicate to show only the LATEST status of each unique machine in the table
-        dashboard_data = raw_data.dropna(subset=["Machine", "Health Score"]).drop_duplicates(subset=["Machine"], keep="last")
-            
     except Exception as e:
-        st.warning("No maintenance records available yet. Please run a prediction first.")
+        st.error(f"Error loading dataset: {e}")
         return
 
-    # Top level metrics
-    total_machines = len(dashboard_data)
-    critical_df = dashboard_data[dashboard_data["Priority"].isin(["Critical", "Very Critical"])]
-    critical_count = len(critical_df)
-    avg_health = dashboard_data["Health Score"].mean()
+    # Top metrics based on the AI4I Dataset
+    total_records = len(df)
+    total_failures = df["Machine failure"].sum()
+    failure_rate = (total_failures / total_records) * 100
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Unique Machines Monitored", total_machines)
+        st.metric("Total Historical Records", total_records)
     with col2:
-        st.metric("Critical Machines", critical_count)
+        st.metric("Total Recorded Failures", total_failures)
     with col3:
-        st.metric("Factory Avg Health Score", f"{avg_health:.1f}")
+        st.metric("Overall Failure Rate", f"{failure_rate:.2f}%")
 
     st.markdown("---")
+    st.subheader("📈 Original Training Data Analytics")
     
-    # 3-Chart Holistic View (Pie, Bar, Line) for ALL DATA
-    st.subheader("📈 Holistic Factory Analytics")
-    chart_col1, chart_col2, chart_col3 = st.columns(3)
+    chart_col1, chart_col2 = st.columns(2)
 
     with chart_col1:
-        # Pie Chart: Current Priority Distribution across all machines
-        priority_count = dashboard_data["Priority"].value_counts()
+        # Chart 1: Pie Chart of Machine Quality (Low, Medium, High)
+        type_counts = df["Type"].value_counts()
         fig_pie = px.pie(
-            values=priority_count.values,
-            names=priority_count.index,
-            title="Overall Factory Priority Status",
+            values=type_counts.values,
+            names=type_counts.index,
+            title="1. Machine Quality Distribution (L, M, H)",
             hole=0.3
         )
-        fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"), margin=dict(t=40, b=0, l=0, r=0))
+        fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
         st.plotly_chart(fig_pie, use_container_width=True, theme=None)
 
     with chart_col2:
-        # Bar Chart: Health scores of all unique machines
+        # Chart 2: Bar Chart of Failures by Machine Type
+        failure_counts = df.groupby("Type")["Machine failure"].sum().reset_index()
         fig_bar = px.bar(
-            dashboard_data,
-            x="Machine",
-            y="Health Score",
-            color="Priority",
-            title="Live Health Scores (All Machines)"
+            failure_counts,
+            x="Type",
+            y="Machine failure",
+            color="Type",
+            title="2. Total Failures by Machine Quality Type"
         )
-        fig_bar.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"), margin=dict(t=40, b=0, l=0, r=0), xaxis_type='category')
+        fig_bar.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
         st.plotly_chart(fig_bar, use_container_width=True, theme=None)
 
-    with chart_col3:
-        # Line Chart: Average Factory Health trend over time
-        avg_trend = raw_data.groupby("Prediction ID")["Health Score"].mean().reset_index()
-        fig_line = px.line(
-            avg_trend,
-            x="Prediction ID",
-            y="Health Score",
-            title="Factory Health Trend Over Time",
-            markers=True
-        )
-        fig_line.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"), margin=dict(t=40, b=0, l=0, r=0))
-        st.plotly_chart(fig_line, use_container_width=True, theme=None)
-
+    # Chart 3: The New Distribution Histogram
     st.markdown("---")
-    st.subheader("📋 Latest Factory Snapshot")
-    st.dataframe(dashboard_data, use_container_width=True)
+    st.subheader("3. Tool Wear vs. Machine Failure Distribution")
+    st.info("💡 **How to read this chart:** This is a **Distribution Histogram**. It shows how the amount of **Tool Wear (in minutes)** impacts whether a machine fails or remains healthy. The red bars highlight the 'danger zone' where tool wear gets too high and causes system failures.")
+    
+    # Map 0 and 1 to readable strings so the legend looks professional
+    df["Status"] = df["Machine failure"].map({0: "Healthy", 1: "Failed"})
+    
+    fig_hist = px.histogram(
+        df,
+        x="Tool wear [min]",
+        color="Status",
+        barmode="overlay",
+        opacity=0.75,
+        color_discrete_map={"Healthy": "#22C55E", "Failed": "#EF4444"}
+    )
+    fig_hist.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
+    st.plotly_chart(fig_hist, use_container_width=True, theme=None)
 
 
 def machine_analysis_page():
-    st.header("🔍 Specific Machine Analysis (Micro View)")
-    st.write("Select a specific machine from the dropdown to deep-dive into its historical prediction data and health trends.")
+    st.header("🔍 Prediction Log Analysis")
+    st.write("Select a specific machine to drill down into the predictions you have generated using the Predictor tab.")
 
     try:
         raw_data = pd.read_csv("output/maintenance_results.csv")
         if raw_data.empty or "Machine" not in raw_data.columns:
-            st.warning("No historical data available. Please run predictions first.")
+            st.warning("No predictions available yet. Please use the Predictor tab first.")
             return
             
         raw_data["Health Score"] = pd.to_numeric(raw_data["Health Score"], errors="coerce")
@@ -337,56 +330,27 @@ def machine_analysis_page():
         raw_data["Prediction ID"] = raw_data.index + 1
         
     except Exception as e:
-        st.warning("Could not load historical data.")
+        st.warning("No predictions available yet. Please use the Predictor tab first.")
         return
 
-    # Selector for specific machine drill-down
     machine_list = raw_data["Machine"].unique()
     selected_machine = st.selectbox("🏭 Select Machine to Analyze:", machine_list)
 
-    # Filter data to only the selected machine
     machine_data = raw_data[raw_data["Machine"] == selected_machine]
-
-    # Metrics for specific machine
-    latest_status = machine_data.iloc[-1]
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(f"Current Health: {selected_machine}", f"{latest_status['Health Score']:.1f}/100")
-    with col2:
-        st.metric("Current Status", latest_status['Priority'])
-    with col3:
-        st.metric("Total Predictions Logged", len(machine_data))
 
     st.markdown("---")
     
-    # Specific Machine Charts
-    chart_col1, chart_col2 = st.columns(2)
-    
-    with chart_col1:
-        # Line chart of this specific machine's health over time
-        fig_health = px.line(
-            machine_data, 
-            x="Prediction ID", 
-            y="Health Score", 
-            markers=True, 
-            title=f"{selected_machine}: Health Trend"
-        )
-        fig_health.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
-        st.plotly_chart(fig_health, use_container_width=True, theme=None)
+    fig_line = px.line(
+        machine_data, 
+        x="Prediction ID", 
+        y="Health Score", 
+        markers=True, 
+        title=f"Health Degradation Trend: {selected_machine}"
+    )
+    fig_line.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
+    st.plotly_chart(fig_line, use_container_width=True, theme=None)
 
-    with chart_col2:
-        # Bar chart of this specific machine's failure probability over time
-        fig_fail = px.bar(
-            machine_data, 
-            x="Prediction ID", 
-            y="Failure Probability", 
-            color="Priority",
-            title=f"{selected_machine}: Failure Risk Trend"
-        )
-        fig_fail.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"), xaxis_type='category')
-        st.plotly_chart(fig_fail, use_container_width=True, theme=None)
-
-    st.subheader(f"📑 Complete History Log: {selected_machine}")
+    st.subheader(f"📑 Filtered History Log: {selected_machine}")
     st.dataframe(machine_data, use_container_width=True)
 
 
