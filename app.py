@@ -49,6 +49,10 @@ div[data-testid="stMetric"] {
     padding: 15px;
 }
 
+div[data-testid="stMetric"] * {
+    color: #F8FAFC !important;
+}
+
 .stButton > button {
     background: linear-gradient(
         90deg,
