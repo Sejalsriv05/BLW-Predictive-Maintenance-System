@@ -458,7 +458,7 @@ fig.update_layout(
         font=dict(color="white")
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
     st.subheader("📅 Maintenance Schedule")
 
 fig = px.bar(
