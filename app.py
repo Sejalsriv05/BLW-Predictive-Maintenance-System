@@ -28,21 +28,22 @@ st.markdown("""
     background-color: #1E293B !important;
 }
 
-/* Aggressive targeting for the << collapse button in newer Streamlit versions */
-[data-testid="stSidebarCollapseButton"], 
-[data-testid="collapsedControl"],
-button[kind="headerNoPadding"],
-button[kind="header"] {
-    background-color: #FFFFFF !important;
-    border-radius: 5px !important;
+/* Ultimate override for the top-left navigation toggle button */
+header[data-testid="stHeader"] {
+    background-color: transparent !important;
 }
-[data-testid="stSidebarCollapseButton"] svg, 
-[data-testid="collapsedControl"] svg,
-button[kind="headerNoPadding"] svg,
-button[kind="header"] svg {
-    fill: #000000 !important;
-    color: #000000 !important;
-    stroke: #000000 !important;
+header[data-testid="stHeader"] button, 
+[data-testid="collapsedControl"], 
+[data-testid="stSidebarCollapseButton"] {
+    background-color: #000000 !important;
+    border-radius: 5px !important;
+    border: 1px solid #334155 !important;
+}
+header[data-testid="stHeader"] button svg, 
+[data-testid="collapsedControl"] svg, 
+[data-testid="stSidebarCollapseButton"] svg {
+    fill: #FFFFFF !important;
+    color: #FFFFFF !important;
 }
 
 label, label p, p, span {
@@ -245,7 +246,6 @@ def dashboard_page():
     st.write("This macro dashboard analyzes the original historical dataset used to train the Predictive Maintenance model.")
 
     try:
-        # Explicitly loading from the dataset folder
         if os.path.exists("dataset/ai4i2020.csv"):
             df = pd.read_csv("dataset/ai4i2020.csv")
         elif os.path.exists("ai4i2020.csv"):
@@ -258,7 +258,6 @@ def dashboard_page():
         st.error(f"Error loading dataset: {e}")
         return
 
-    # Top metrics based on the AI4I Dataset
     total_records = len(df)
     total_failures = df["Machine failure"].sum()
     failure_rate = (total_failures / total_records) * 100
@@ -277,7 +276,6 @@ def dashboard_page():
     chart_col1, chart_col2 = st.columns(2)
 
     with chart_col1:
-        # Chart 1: Pie Chart of Machine Quality (Low, Medium, High)
         type_counts = df["Type"].value_counts()
         fig_pie = px.pie(
             values=type_counts.values,
@@ -289,7 +287,6 @@ def dashboard_page():
         st.plotly_chart(fig_pie, use_container_width=True, theme=None)
 
     with chart_col2:
-        # Chart 2: Bar Chart of Failures by Machine Type
         failure_counts = df.groupby("Type")["Machine failure"].sum().reset_index()
         fig_bar = px.bar(
             failure_counts,
@@ -301,7 +298,6 @@ def dashboard_page():
         fig_bar.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
         st.plotly_chart(fig_bar, use_container_width=True, theme=None)
 
-    # Chart 3: Distribution Histogram
     st.markdown("---")
     st.subheader("3. Tool Wear vs. Machine Failure Distribution")
     st.info("💡 **How to read this chart:** This is a **Distribution Histogram**. It shows how the amount of **Tool Wear (in minutes)** impacts whether a machine fails or remains healthy. The red bars highlight the 'danger zone' where tool wear gets too high and causes system failures.")
@@ -326,7 +322,6 @@ def machine_analysis_page():
 
     try:
         raw_data = pd.read_csv("output/maintenance_results.csv")
-        # Clean out empty rows or corrupted string data from previous broken runs
         raw_data = raw_data.dropna(subset=["Machine"])
         raw_data = raw_data[raw_data["Machine"].astype(str).str.lower() != 'nan']
 
@@ -342,7 +337,6 @@ def machine_analysis_page():
         st.warning("No predictions available yet. Please use the Predictor tab first.")
         return
 
-    # Create cleaned list for dropdown
     machine_list = raw_data["Machine"].unique()
     selected_machine = st.selectbox("🏭 Select Machine to Analyze:", machine_list)
 
@@ -350,16 +344,21 @@ def machine_analysis_page():
 
     st.markdown("---")
     
-    # This generates a Line Chart
-    fig_line = px.line(
+    # Swapped Line Chart to a Bar Chart as requested
+    fig_bar = px.bar(
         machine_data, 
         x="Prediction ID", 
         y="Health Score", 
-        markers=True, 
-        title=f"Line Chart: Health Degradation Trend for {selected_machine}"
+        color="Priority",
+        title=f"Bar Chart: Health History for {selected_machine}"
     )
-    fig_line.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
-    st.plotly_chart(fig_line, use_container_width=True, theme=None)
+    fig_bar.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(0,0,0,0)", 
+        font=dict(color="white"),
+        xaxis_type='category' # Keeps the x-axis clean
+    )
+    st.plotly_chart(fig_bar, use_container_width=True, theme=None)
 
     st.subheader(f"📑 Filtered History Log: {selected_machine}")
     st.dataframe(machine_data, use_container_width=True)
