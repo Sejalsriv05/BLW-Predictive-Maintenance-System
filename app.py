@@ -459,7 +459,7 @@ fig.update_layout(
     )
 
 st.plotly_chart(fig, use_container_width=True)
-    st.subheader("📅 Maintenance Schedule")
+st.subheader("📅 Maintenance Schedule")
 
 fig = px.bar(
         dashboard_data,
