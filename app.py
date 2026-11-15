@@ -306,8 +306,11 @@ def dashboard_page():
 
     try:
         dashboard_data = pd.read_csv("output/maintenance_results.csv")
+        if dashboard_data.empty or "Machine" not in dashboard_data.columns:
+            st.warning("No maintenance records available yet. Please run a prediction first.")
+            return
     except:
-        st.warning("No maintenance records available yet.")
+        st.warning("No maintenance records available yet. Please run a prediction first.")
         return
 
     st.dataframe(dashboard_data, use_container_width=True)
