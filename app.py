@@ -452,7 +452,7 @@ fig = px.bar(
     )
     
     # Force transparent background and white text to match your app theme
-    fig.update_layout(
+fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)", 
         font=dict(color="white")
@@ -461,7 +461,7 @@ fig = px.bar(
     st.plotly_chart(fig, use_container_width=True)
     st.subheader("📅 Maintenance Schedule")
 
-    fig = px.bar(
+fig = px.bar(
         dashboard_data,
         x="Machine",
         y="Maintenance Due",
