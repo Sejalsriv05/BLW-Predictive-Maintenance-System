@@ -469,7 +469,7 @@ fig = px.bar(
         title="Maintenance Due Days"
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
     st.subheader("🚨 Critical Machines")
 
     critical_df = dashboard_data[
