@@ -476,33 +476,33 @@ critical_df = dashboard_data[
     dashboard_data["Priority"] == "Critical"
 ]
 
-    st.dataframe(
-        critical_df,
-        use_container_width=True
+st.dataframe(
+    critical_df,
+    use_container_width=True
+)
+total_machines = len(dashboard_data)
+
+critical_count = len(
+    dashboard_data[
+        dashboard_data["Priority"] == "Critical"
+     ]
+ )
+
+avg_health = dashboard_data[
+    "Health Score"
+].mean()
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric(
+        "Total Machines",
+        total_machines
     )
-    total_machines = len(dashboard_data)
 
-    critical_count = len(
-        dashboard_data[
-            dashboard_data["Priority"] == "Critical"
-        ]
-    )
-
-    avg_health = dashboard_data[
-        "Health Score"
-    ].mean()
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            "Total Machines",
-            total_machines
-        )
-
-    with col2:
-        st.metric(
-            "Critical Machines",
+with col2:
+    st.metric(
+        "Critical Machines",
             critical_count
         )
 
