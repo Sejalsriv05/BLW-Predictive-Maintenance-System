@@ -21,22 +21,29 @@ with st.sidebar:
 
 st.markdown("""
 <style>
+/* Force Main App and Sidebar to Dark Theme */
 .stApp, [data-testid="stAppViewContainer"] {
     background-color: #0F172A !important;
 }
 [data-testid="stSidebar"] {
     background-color: #1E293B !important;
 }
-[data-testid="collapsedControl"] {
+
+/* Fix for both the >> expand button and the << collapse button */
+[data-testid="collapsedControl"], 
+[data-testid="stSidebarCollapseButton"] {
     color: #000000 !important;
     background-color: #FFFFFF !important;
     border-radius: 5px !important;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
 }
-[data-testid="collapsedControl"] svg {
+[data-testid="collapsedControl"] svg, 
+[data-testid="stSidebarCollapseButton"] svg {
     fill: #000000 !important;
     color: #000000 !important;
 }
+
+/* Force all labels and standard text to be white */
 label, label p, p, span {
     color: #F8FAFC !important;
 }
@@ -237,15 +244,13 @@ def dashboard_page():
     st.write("This macro dashboard analyzes the original historical dataset used to train the Predictive Maintenance model.")
 
     try:
-        # Load the UCI dataset from the repository
-        if os.path.exists("data/ai4i2020.csv"):
-            df = pd.read_csv("data/ai4i2020.csv")
+        # Explicitly loading from the dataset folder
+        if os.path.exists("dataset/ai4i2020.csv"):
+            df = pd.read_csv("dataset/ai4i2020.csv")
         elif os.path.exists("ai4i2020.csv"):
             df = pd.read_csv("ai4i2020.csv")
-        elif os.path.exists("predictive_maintenance.csv"):
-            df = pd.read_csv("predictive_maintenance.csv")
         else:
-            st.error("⚠️ Dataset not found. Please ensure your UCI dataset is uploaded to GitHub and named 'ai4i2020.csv'.")
+            st.error("⚠️ Dataset not found. Please ensure your UCI dataset is uploaded to GitHub and named 'ai4i2020.csv' in the 'dataset' folder.")
             return
             
     except Exception as e:
@@ -295,7 +300,7 @@ def dashboard_page():
         fig_bar.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color="white"))
         st.plotly_chart(fig_bar, use_container_width=True, theme=None)
 
-    # Chart 3: The New Distribution Histogram
+    # Chart 3: Distribution Histogram
     st.markdown("---")
     st.subheader("3. Tool Wear vs. Machine Failure Distribution")
     st.info("💡 **How to read this chart:** This is a **Distribution Histogram**. It shows how the amount of **Tool Wear (in minutes)** impacts whether a machine fails or remains healthy. The red bars highlight the 'danger zone' where tool wear gets too high and causes system failures.")
