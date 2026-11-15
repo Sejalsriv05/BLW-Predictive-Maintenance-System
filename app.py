@@ -472,9 +472,9 @@ fig = px.bar(
 st.plotly_chart(fig, use_container_width=True)
 st.subheader("🚨 Critical Machines")
 
-    critical_df = dashboard_data[
-        dashboard_data["Priority"] == "Critical"
-    ]
+critical_df = dashboard_data[
+    dashboard_data["Priority"] == "Critical"
+]
 
     st.dataframe(
         critical_df,
