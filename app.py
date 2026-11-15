@@ -364,4 +364,5 @@ if page == "🏠 Home":
     home_page()
 elif page == "🔍 Predictor":
     predictor_page()
-elif page == "📊 Dashboard
+elif page == "📊 Dashboard":
+    dashboard_page()
