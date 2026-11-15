@@ -16,17 +16,32 @@ with st.sidebar:
     st.title("🚂 BLW")
     page = st.radio(
         "Navigation",
-        ["🏠 Home", "🔍 Predictor", "📊 Dashboard"]
+        ["🏠 Home", "🔍 Predictor", "📊 Dashboard", "📈 Machine Analysis"]
     )
 
 st.markdown("""
 <style>
+/* Force Main App and Sidebar to Dark Theme */
 .stApp, [data-testid="stAppViewContainer"] {
     background-color: #0F172A !important;
 }
 [data-testid="stSidebar"] {
     background-color: #1E293B !important;
 }
+
+/* Fix for the top-left sidebar navigation expand/collapse button */
+[data-testid="collapsedControl"] {
+    color: #000000 !important;
+    background-color: #FFFFFF !important;
+    border-radius: 5px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+}
+[data-testid="collapsedControl"] svg {
+    fill: #000000 !important;
+    color: #000000 !important;
+}
+
+/* Force all labels and standard text to be white */
 label, label p, p, span {
     color: #F8FAFC !important;
 }
@@ -87,7 +102,7 @@ def home_page():
     with col1:
         st.success("✔ Predict Machine Failures")
         st.success("✔ Generate Maintenance Schedule")
-        st.success("✔ Health Score Analysis")
+        st.success("✔ Historical Trend Analysis")
     with col2:
         st.success("✔ Failure Risk Detection")
         st.success("✔ Dashboard Analytics")
@@ -237,7 +252,7 @@ def predictor_page():
 
 
 def dashboard_page():
-    st.header("📊 Maintenance Dashboard")
+    st.header("📊 Current Factory Dashboard")
 
     try:
         raw_data = pd.read_csv("output/maintenance_results.csv")
@@ -245,12 +260,10 @@ def dashboard_page():
             st.warning("No maintenance records available yet. Please run a prediction first.")
             return
             
-        # --- DATA ANALYST CLEANING PIPELINE ---
-        # Force numeric types to clear out dirty CSV data strings
         raw_data["Health Score"] = pd.to_numeric(raw_data["Health Score"], errors="coerce")
         raw_data["Maintenance Due"] = pd.to_numeric(raw_data["Maintenance Due"], errors="coerce")
         
-        # Deduplicate to show only the most recent status of each machine
+        # Dashboard only shows the LATEST status of each unique machine
         dashboard_data = raw_data.dropna(subset=["Machine", "Health Score"]).drop_duplicates(subset=["Machine"], keep="last")
         
         if dashboard_data.empty:
@@ -263,46 +276,30 @@ def dashboard_page():
 
     st.dataframe(dashboard_data, use_container_width=True)
     
-    st.subheader("📊 Priority Distribution")
+    st.subheader("📊 Current Priority Distribution")
     priority_count = dashboard_data["Priority"].value_counts()
     fig1 = px.pie(
         values=priority_count.values,
         names=priority_count.index,
-        title="Current Maintenance Priority Distribution"
+        title="Live Maintenance Priorities"
     )
     st.plotly_chart(fig1, use_container_width=True, theme=None)
 
-    st.subheader("🏭 Machine Health Scores")
+    st.subheader("🏭 Latest Machine Health Scores")
     fig2 = px.bar(
         dashboard_data,
         x="Machine",
         y="Health Score",
         color="Priority",
-        title="Latest Machine Health Score Analysis"
+        title="Machine Health Score Analysis"
     )
     fig2.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)", 
         font=dict(color="white"),
-        xaxis_type='category'  # Forces Plotly to display machine names, not numbers
+        xaxis_type='category' 
     )
     st.plotly_chart(fig2, use_container_width=True, theme=None)
-    
-    st.subheader("📅 Maintenance Schedule")
-    fig3 = px.bar(
-        dashboard_data,
-        x="Machine",
-        y="Maintenance Due",
-        color="Priority",
-        title="Days Until Maintenance Due"
-    )
-    fig3.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", 
-        plot_bgcolor="rgba(0,0,0,0)", 
-        font=dict(color="white"),
-        xaxis_type='category'  # Forces Plotly to display machine names, not numbers
-    )
-    st.plotly_chart(fig3, use_container_width=True, theme=None)
     
     st.subheader("🚨 Critical Machines")
     critical_df = dashboard_data[dashboard_data["Priority"].isin(["Critical", "Very Critical"])]
@@ -312,17 +309,87 @@ def dashboard_page():
     else:
         st.dataframe(critical_df, use_container_width=True)
 
-    total_machines = len(dashboard_data)
-    critical_count = len(critical_df)
-    avg_health = dashboard_data["Health Score"].mean()
 
+def machine_analysis_page():
+    st.header("📈 Historical Machine Analysis")
+    st.write("Review the comprehensive historical log of all predictions run across the factory.")
+
+    try:
+        raw_data = pd.read_csv("output/maintenance_results.csv")
+        if raw_data.empty or "Machine" not in raw_data.columns:
+            st.warning("No historical data available. Please run predictions first.")
+            return
+            
+        raw_data["Health Score"] = pd.to_numeric(raw_data["Health Score"], errors="coerce")
+        raw_data["Failure Probability"] = pd.to_numeric(raw_data["Failure Probability"], errors="coerce")
+        # Add a chronological index to track changes over time
+        raw_data["Prediction ID"] = raw_data.index + 1
+        
+    except Exception as e:
+        st.warning("Could not load historical data.")
+        return
+
+    st.subheader("📁 Complete Prediction Log")
+    st.dataframe(raw_data, use_container_width=True)
+
+    st.markdown("---")
+    st.subheader("📊 Holistic Factory Analytics")
+    
+    # Display Pie, Line, and Bar charts side-by-side
     col1, col2, col3 = st.columns(3)
+
     with col1:
-        st.metric("Unique Machines Monitored", total_machines)
+        # Pie Chart: All-time historical priority distribution
+        historical_counts = raw_data["Priority"].value_counts()
+        fig_pie = px.pie(
+            values=historical_counts.values,
+            names=historical_counts.index,
+            title="All-Time Priority Distribution",
+            hole=0.3
+        )
+        fig_pie.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", 
+            plot_bgcolor="rgba(0,0,0,0)", 
+            font=dict(color="white"),
+            margin=dict(t=40, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_pie, use_container_width=True, theme=None)
+
     with col2:
-        st.metric("Critical Machines", critical_count)
+        # Line Chart: Health score trends over time (Prediction ID)
+        fig_line = px.line(
+            raw_data,
+            x="Prediction ID",
+            y="Health Score",
+            color="Machine",
+            title="Health Score Trends Over Time",
+            markers=True
+        )
+        fig_line.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", 
+            plot_bgcolor="rgba(0,0,0,0)", 
+            font=dict(color="white"),
+            margin=dict(t=40, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_line, use_container_width=True, theme=None)
+
     with col3:
-        st.metric("Average Health Score", f"{avg_health:.1f}")
+        # Bar Chart: Average Failure Probability by Machine Category
+        avg_fail = raw_data.groupby("Category")["Failure Probability"].mean().reset_index()
+        fig_bar = px.bar(
+            avg_fail,
+            x="Category",
+            y="Failure Probability",
+            title="Avg Failure Risk by Category",
+            color="Category"
+        )
+        fig_bar.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", 
+            plot_bgcolor="rgba(0,0,0,0)", 
+            font=dict(color="white"),
+            margin=dict(t=40, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig_bar, use_container_width=True, theme=None)
 
 
 if page == "🏠 Home":
@@ -331,3 +398,5 @@ elif page == "🔍 Predictor":
     predictor_page()
 elif page == "📊 Dashboard":
     dashboard_page()
+elif page == "📈 Machine Analysis":
+    machine_analysis_page()
